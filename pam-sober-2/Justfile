@@ -1,0 +1,16 @@
+
+all:
+    cargo build
+
+install:
+    @cargo build --release
+    sudo cp conf/sober-auth-2 /etc/pam.d/
+    sudo cp ../target/release/libpam_sober_2.so /lib/security/pam_sober_2.so
+
+test:
+    @just install
+    gcc -o ../target/pam_test test.c -lpam -lpam_misc
+
+clean:
+    cargo clean
+

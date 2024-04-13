@@ -51,6 +51,13 @@ extern "C" {
         user: &*mut c_char,
         prompt: *const c_char,
     ) -> PamResultCode;
+
+    fn pam_get_authtok(
+        pamh: *const PamHandle,
+        item_type: crate::items::ItemType,
+        authtok: &*mut c_char,
+        prompt: *const c_char,
+    ) -> PamResultCode;
 }
 
 pub extern "C" fn cleanup<T>(_: *const PamHandle, c_data: *mut libc::c_void, _: PamResultCode) {
@@ -193,6 +200,43 @@ impl PamHandle {
             None => std::ptr::null(),
         };
         let res = unsafe { pam_get_user(self, &ptr, c_prompt) };
+        if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
+            let const_ptr = ptr as *const c_char;
+            let bytes = unsafe { CStr::from_ptr(const_ptr).to_bytes() };
+            String::from_utf8(bytes.to_vec()).map_err(|_| PamResultCode::PAM_CONV_ERR)
+        } else {
+            Err(res)
+        }
+    }
+
+    /// Retrieves the authentication token of the user.
+    ///
+    /// This is really a specialization of `get_item`.
+    ///
+    /// See `pam_get_authtok` in
+    /// https://www.man7.org/linux/man-pages/man3/pam_get_authtok.3.html
+    ///
+    /// `token_type` is either `AuthTok` (a current token or password) or
+    /// `OldAuthTok` (the previous token/password - for changing).
+    /// 
+    /// # Errors
+    ///
+    /// Returns an error if the underlying PAM function call fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided prompt string contains a nul byte
+    pub fn get_authtok(&self, token_type: crate::items::ItemType, prompt: Option<&str>) -> PamResult<String> {
+        let ptr: *mut c_char = std::ptr::null_mut();
+        let prompt_string;
+        let c_prompt = match prompt {
+            Some(p) => {
+                prompt_string = CString::new(p).unwrap();
+                prompt_string.as_ptr()
+            }
+            None => std::ptr::null(),
+        };
+        let res = unsafe { pam_get_authtok(self, token_type, &ptr, c_prompt) };
         if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
             let const_ptr = ptr as *const c_char;
             let bytes = unsafe { CStr::from_ptr(const_ptr).to_bytes() };
