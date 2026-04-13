@@ -14,3 +14,4 @@ name = "pam"
 
 [dependencies]
 libc = "0.2.97"
+secrets = "1.2"

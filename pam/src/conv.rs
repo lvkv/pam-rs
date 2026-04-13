@@ -1,5 +1,6 @@
 use libc::{c_char, c_int};
-use std::ffi::{CStr, CString};
+use secrets::SecretVec;
+use std::ffi::CString;
 use std::ptr;
 
 use constants::PamResultCode;
@@ -53,7 +54,7 @@ impl<'a> Conv<'a> {
     /// Note that the user experience will depend on how the client implements
     /// these message styles - and not all applications implement all message
     /// styles.
-    pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<&CStr>> {
+    pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<SecretVec<u8>>> {
         let mut resp_ptr: *const PamResponse = ptr::null();
         let msg_cstr = CString::new(msg).unwrap();
         let msg = PamMessage {
@@ -65,12 +66,27 @@ impl<'a> Conv<'a> {
 
         if PamResultCode::PAM_SUCCESS == ret {
             // PamResponse.resp is null for styles that don't return user input like PAM_TEXT_INFO
-            let response = unsafe { (*resp_ptr).resp };
+            let response: *mut c_char = unsafe { (*resp_ptr).resp as *mut c_char };
             if response.is_null() {
-                Ok(None)
-            } else {
-                Ok(Some(unsafe { CStr::from_ptr(response) }))
+                return Ok(None);
             }
+
+            // SAFETY: response is a non-null, null-terminated C string allocated
+            // by the PAM client application via malloc. We copy it into protected
+            // memory, then zeroize and free the original before returning so that
+            // the plaintext does not linger in unprotected heap memory.
+            let secret = unsafe {
+                let len = libc::strlen(response);
+                let bytes = std::slice::from_raw_parts(response as *const u8, len);
+                let secret = SecretVec::new(len, |out| out.copy_from_slice(bytes));
+                // Zeroize before free so the contents are gone before the
+                // allocator can hand this memory to someone else.
+                std::ptr::write_bytes(response, 0u8, len);
+                libc::free(response as *mut libc::c_void);
+                secret
+            };
+
+            Ok(Some(secret))
         } else {
             Err(ret)
         }

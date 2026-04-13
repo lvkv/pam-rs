@@ -25,6 +25,7 @@
 //! to work on other platforms.
 
 extern crate libc;
+extern crate secrets;
 
 pub mod constants;
 pub mod conv;
