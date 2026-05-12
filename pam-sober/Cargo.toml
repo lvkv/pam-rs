@@ -2,6 +2,8 @@
 name = "pam-sober"
 version = "0.1.0"
 authors = ["Anthony Nowell <anowell@gmail.com>"]
+license = "MIT"
+license-file = "../LICENSE"
 
 [lib]
 name = "pam_sober"

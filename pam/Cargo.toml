@@ -8,6 +8,7 @@ repository = "https://github.com/anowell/pam-rs"
 readme = "../README.md"
 keywords = ["pam", "ffi", "linux", "authentication"]
 license = "MIT"
+license-file = "../LICENSE"
 
 [lib]
 name = "pam"
