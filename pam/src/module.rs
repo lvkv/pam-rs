@@ -66,7 +66,7 @@ impl PamHandle {
     /// previously.
     ///
     /// See `pam_get_data` in
-    /// http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html
+    /// <http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html>
     ///
     /// # Errors
     ///
@@ -93,7 +93,7 @@ impl PamHandle {
     /// as long as the current pam cycle.
     ///
     /// See `pam_set_data` in
-    /// http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html
+    /// <http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html>
     ///
     /// # Errors
     ///
@@ -119,7 +119,7 @@ impl PamHandle {
     /// particularly useful for getting a `PamConv` reference.
     ///
     /// See `pam_get_item` in
-    /// http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html
+    /// <http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html>
     ///
     /// # Errors
     ///
@@ -149,7 +149,7 @@ impl PamHandle {
     /// Note that all items are strings, except `PAM_CONV` and `PAM_FAIL_DELAY`.
     ///
     /// See `pam_set_item` in
-    /// http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html
+    /// <http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html>
     ///
     /// # Errors
     ///
@@ -160,7 +160,7 @@ impl PamHandle {
     /// Panics if the provided item key contains a nul byte
     pub fn set_item_str<T: crate::items::Item>(&mut self, item: T) -> PamResult<()> {
         let res =
-            unsafe { pam_set_item(self, T::type_id(), item.into_raw().cast::<libc::c_void>())};
+            unsafe { pam_set_item(self, T::type_id(), item.into_raw().cast::<libc::c_void>()) };
         if PamResultCode::PAM_SUCCESS == res {
             Ok(())
         } else {
@@ -173,7 +173,7 @@ impl PamHandle {
     /// This is really a specialization of `get_item`.
     ///
     /// See `pam_get_user` in
-    /// http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html
+    /// <http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html>
     ///
     /// # Errors
     ///
