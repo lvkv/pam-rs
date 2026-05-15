@@ -1,0 +1,68 @@
+name: Rust
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: |
+          cargo fmt --check
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Environment
+        run: |
+          sudo apt-get install -y libpam0g-dev
+      - name: Run tests
+        run: |
+          # It is not possible to run all the tests in a single
+          # `cargo test` invocation. Specifically, `--all-targets`
+          # does not cover doc tests [1].
+          #
+          # [1]: https://github.com/rust-lang/cargo/issues/6669
+
+          # Run all non-doc tests.
+          cargo test \
+            --workspace \
+            --all-features \
+            --verbose \
+            --all-targets
+
+          # Run all doc tests.
+          cargo test \
+            --workspace \
+            --all-features \
+            --verbose \
+            --doc
+
+  documentation:
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Documentation
+        run: |
+          cargo doc \
+            --workspace \
+            --all-features \
+            --no-deps
