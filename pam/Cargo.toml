@@ -1,13 +1,17 @@
 [package]
-
 name = "pam-bindings"
-description = "PAM bindings for Rust"
-version = "0.1.1"
-authors = [ "Anthony Nowell <anowell@gmail.com>" ]
-repository = "https://github.com/anowell/pam-rs"
+description = "Simplified PAM module creation in Rust"
+version = "0.1.2"
+authors = [
+    "Anthony Nowell <anowell@gmail.com>",
+    "Lukas Velikov <velikovlukas@gmail.com>",
+]
+repository = "https://github.com/lvkv/pam-rs"
+homepage = "https://github.com/lvkv/pam-rs"
 readme = "../README.md"
-keywords = ["pam", "ffi", "linux", "authentication"]
 license = "MIT"
+keywords = ["pam", "ffi", "linux", "authentication"]
+categories = ["authentication", "security", "os", "external-ffi-bindings"]
 
 [lib]
 name = "pam"
