@@ -14,3 +14,11 @@ name = "pam"
 
 [dependencies]
 libc = "0.2.97"
+
+[[example]]
+name = "username"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "trivial"
+crate-type = ["cdylib"]
