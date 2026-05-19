@@ -1,52 +1,17 @@
-# pam-bindings
+# {{crate}}
 
 [![Test Status](https://github.com/lvkv/pam-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/lvkv/pam-rs/actions/workflows/rust.yml)
-[![Crate](https://img.shields.io/crates/v/pam-bindings.svg)](https://crates.io/crates/pam-bindings)
+[![Crate](https://img.shields.io/crates/v/{{crate}}.svg)](https://crates.io/crates/{{crate}})
 
-Simplified PAM module creation in Rust.
-
-```rust
-use pam::constants::{PamFlag, PamResultCode};
-use pam::module::{PamHandle, PamHooks};
-use std::ffi::CStr;
-
-struct AliceOnly;
-pam::pam_hooks!(AliceOnly);
-
-impl PamHooks for AliceOnly {
-    fn sm_authenticate(pamh: &mut PamHandle, _args: Vec<&CStr>, _flags: PamFlag) -> PamResultCode {
-        let username = match pamh.get_user(None) {
-            Ok(username) => username,
-            Err(e) => {
-                eprintln!("failed to get username, error code: {e:?}");
-                return e;
-            }
-        };
-
-        match username.as_str() {
-            "alice" => PamResultCode::PAM_SUCCESS,
-            _ => PamResultCode::PAM_AUTH_ERR,
-        }
-    }
-}
-```
-
-## Introduction
-
-The Pluggable Authentication Modules (PAM) framework enables systems to
-authenticate users and perform other functions by composing PAM modules,
-which are distributed as shared libraries.
-
-The goal of this library is to provide a simple, type-safe API to write
-these modules.
+{{readme}}
 
 ## Usage
 
-Add `pam-bindings` to your dependencies in Cargo.toml:
+Add `{{crate}}` to your dependencies in Cargo.toml:
 
 ```toml
 [dependencies]
-pam-bindings = "0.1.2"
+{{crate}} = "{{version}}"
 ```
 
 ## Examples

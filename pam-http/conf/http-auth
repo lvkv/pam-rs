@@ -1,2 +1,0 @@
-auth sufficient pam_http.so url=http://localhost:3000
-account sufficient pam_http.so
