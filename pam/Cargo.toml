@@ -15,6 +15,9 @@ name = "pam"
 [dependencies]
 libc = "0.2.97"
 
+[dev-dependencies]
+tempfile = "3"
+
 [[example]]
 name = "username"
 crate-type = ["cdylib"]
