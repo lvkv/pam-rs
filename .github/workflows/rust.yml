@@ -23,6 +23,11 @@ jobs:
       - run: |
           cargo fmt --check
 
+  # It is not possible to run all the tests in a single
+  # `cargo test` invocation. Specifically, `--all-targets`
+  # does not cover doc tests [1].
+  #
+  # [1]: https://github.com/rust-lang/cargo/issues/6669
   test:
     runs-on: ubuntu-latest
     steps:
@@ -30,28 +35,40 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Environment
         run: |
-          sudo apt-get install -y libpam0g-dev
+          sudo apt-get install -y libpam0g-dev bubblewrap pamtester
+          echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
       - name: Run tests
         run: |
-          # It is not possible to run all the tests in a single
-          # `cargo test` invocation. Specifically, `--all-targets`
-          # does not cover doc tests [1].
-          #
-          # [1]: https://github.com/rust-lang/cargo/issues/6669
-
-          # Run all non-doc tests.
+          # Run tests (debug)
           cargo test \
             --workspace \
             --all-features \
             --verbose \
             --all-targets
 
+          # Run tests (release).
+          cargo test \
+            --workspace \
+            --all-features \
+            --verbose \
+            --all-targets \
+            --release
+      - name: Run doc tests
+        run: |
           # Run all doc tests.
           cargo test \
             --workspace \
             --all-features \
             --verbose \
             --doc
+
+          # Run all doc tests (release).
+          cargo test \
+            --workspace \
+            --all-features \
+            --verbose \
+            --doc \
+            --release
 
   documentation:
     runs-on: ubuntu-latest
