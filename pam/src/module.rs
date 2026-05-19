@@ -48,7 +48,7 @@ extern "C" {
 
     fn pam_get_user(
         pamh: *const PamHandle,
-        user: &*mut c_char,
+        user: &mut *const c_char,
         prompt: *const c_char,
     ) -> PamResultCode;
 }
@@ -183,7 +183,7 @@ impl PamHandle {
     ///
     /// Panics if the provided prompt string contains a nul byte
     pub fn get_user(&self, prompt: Option<&str>) -> PamResult<String> {
-        let ptr: *mut c_char = std::ptr::null_mut();
+        let mut ptr: *const c_char = std::ptr::null_mut();
         let prompt_string;
         let c_prompt = match prompt {
             Some(p) => {
@@ -192,7 +192,7 @@ impl PamHandle {
             }
             None => std::ptr::null(),
         };
-        let res = unsafe { pam_get_user(self, &ptr, c_prompt) };
+        let res = unsafe { pam_get_user(self, &mut ptr, c_prompt) };
         if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
             let const_ptr = ptr as *const c_char;
             let bytes = unsafe { CStr::from_ptr(const_ptr).to_bytes() };
