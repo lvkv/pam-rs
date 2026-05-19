@@ -1,0 +1,50 @@
+#[macro_use]
+extern crate pam;
+extern crate rand;
+
+use pam::constants::{PamFlag, PamResultCode, PAM_PROMPT_ECHO_ON};
+use pam::conv::Conv;
+use pam::module::{PamHandle, PamHooks};
+use rand::Rng;
+use std::ffi::CStr;
+use std::str::FromStr;
+
+struct Quiz;
+pam_hooks!(Quiz);
+
+impl PamHooks for Quiz {
+    fn sm_authenticate(pamh: &mut PamHandle, _args: Vec<&CStr>, _flags: PamFlag) -> PamResultCode {
+        let conv = match pamh.get_item::<Conv>() {
+            Ok(Some(conv)) => conv,
+            Ok(None) => return PamResultCode::PAM_CONV_ERR,
+            Err(err) => return err,
+        };
+
+        let mut rng = rand::thread_rng();
+        let a = rng.gen_range(0..100);
+        let b = rng.gen_range(0..100);
+        let prompt = format!("{a} + {b} = ");
+
+        let response = pam_try!(conv.send(PAM_PROMPT_ECHO_ON, &prompt));
+        let Some(response) = response else {
+            return PamResultCode::PAM_CONV_ERR;
+        };
+
+        let response = pam_try!(response.to_str(), PamResultCode::PAM_AUTH_ERR);
+        let answer = pam_try!(u32::from_str(response), PamResultCode::PAM_AUTH_ERR);
+
+        if answer == a + b {
+            PamResultCode::PAM_SUCCESS
+        } else {
+            PamResultCode::PAM_AUTH_ERR
+        }
+    }
+
+    fn sm_setcred(_pamh: &mut PamHandle, _args: Vec<&CStr>, _flags: PamFlag) -> PamResultCode {
+        PamResultCode::PAM_SUCCESS
+    }
+
+    fn acct_mgmt(_pamh: &mut PamHandle, _args: Vec<&CStr>, _flags: PamFlag) -> PamResultCode {
+        PamResultCode::PAM_SUCCESS
+    }
+}

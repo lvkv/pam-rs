@@ -83,3 +83,13 @@ jobs:
             --workspace \
             --all-features \
             --no-deps
+
+  readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify README is in sync with the template
+        run: |
+          cargo install cargo-readme --version 3.3.2 --locked
+          diff README.md <(cargo readme --project-root pam)

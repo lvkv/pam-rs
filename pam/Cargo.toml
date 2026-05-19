@@ -15,11 +15,13 @@ categories = ["authentication", "security", "os", "external-ffi-bindings"]
 
 [lib]
 name = "pam"
+path = "src/lib.rs"
 
 [dependencies]
 libc = "0.2.97"
 
 [dev-dependencies]
+rand = "0.8.4"
 tempfile = "3"
 
 [[example]]
@@ -28,4 +30,8 @@ crate-type = ["cdylib"]
 
 [[example]]
 name = "trivial"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "quiz"
 crate-type = ["cdylib"]
