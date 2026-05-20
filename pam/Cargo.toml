@@ -1,7 +1,9 @@
 [package]
 name = "pam-bindings"
 description = "Simplified PAM module creation in Rust"
-version = "0.1.2"
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.85"
 authors = [
     "Anthony Nowell <anowell@gmail.com>",
     "Lukas Velikov <velikovlukas@gmail.com>",

@@ -1,10 +1,7 @@
-#[macro_use]
-extern crate pam;
-extern crate rand;
-
-use pam::constants::{PamFlag, PamResultCode, PAM_PROMPT_ECHO_ON};
+use pam::constants::{PAM_PROMPT_ECHO_ON, PamFlag, PamResultCode};
 use pam::conv::Conv;
 use pam::module::{PamHandle, PamHooks};
+use pam::{pam_hooks, pam_try};
 use rand::Rng;
 use std::ffi::CStr;
 use std::str::FromStr;

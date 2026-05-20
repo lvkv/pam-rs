@@ -36,8 +36,6 @@
 //! The goal of this library is to provide a simple, type-safe API to write
 //! these modules.
 
-extern crate libc;
-
 pub mod constants;
 pub mod conv;
 pub mod items;

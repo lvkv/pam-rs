@@ -67,7 +67,7 @@ macro_rules! cstr_item {
             }
 
             unsafe fn from_raw(raw: *const Self::Raw) -> Self {
-                Self(std::ffi::CStr::from_ptr(raw))
+                unsafe { Self(std::ffi::CStr::from_ptr(raw)) }
             }
 
             fn into_raw(self) -> *const Self::Raw {

@@ -7,10 +7,9 @@
 /// Here is full example of a PAM module that would authenticate and authorize everybody:
 ///
 /// ```
-/// #[macro_use] extern crate pam;
-///
 /// use pam::module::{PamHooks, PamHandle};
 /// use pam::constants::{PamResultCode, PamFlag};
+/// use pam::pam_hooks;
 /// use std::ffi::CStr;
 ///
 /// # fn main() {}
@@ -45,7 +44,7 @@ macro_rules! pam_hooks {
                     .collect()
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn pam_sm_acct_mgmt(
                 pamh: &mut PamHandle,
                 flags: PamFlag,
@@ -56,7 +55,7 @@ macro_rules! pam_hooks {
                 super::$ident::acct_mgmt(pamh, args, flags)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn pam_sm_authenticate(
                 pamh: &mut PamHandle,
                 flags: PamFlag,
@@ -67,7 +66,7 @@ macro_rules! pam_hooks {
                 super::$ident::sm_authenticate(pamh, args, flags)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn pam_sm_chauthtok(
                 pamh: &mut PamHandle,
                 flags: PamFlag,
@@ -78,7 +77,7 @@ macro_rules! pam_hooks {
                 super::$ident::sm_chauthtok(pamh, args, flags)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn pam_sm_close_session(
                 pamh: &mut PamHandle,
                 flags: PamFlag,
@@ -89,7 +88,7 @@ macro_rules! pam_hooks {
                 super::$ident::sm_close_session(pamh, args, flags)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn pam_sm_open_session(
                 pamh: &mut PamHandle,
                 flags: PamFlag,
@@ -100,7 +99,7 @@ macro_rules! pam_hooks {
                 super::$ident::sm_open_session(pamh, args, flags)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn pam_sm_setcred(
                 pamh: &mut PamHandle,
                 flags: PamFlag,
@@ -132,7 +131,7 @@ macro_rules! pam_try {
 
 #[cfg(test)]
 pub mod test {
-    use module::PamHooks;
+    use crate::module::PamHooks;
 
     struct Foo;
     impl PamHooks for Foo {}

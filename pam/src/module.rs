@@ -3,7 +3,7 @@
 use libc::c_char;
 use std::ffi::{CStr, CString};
 
-use constants::{PamFlag, PamResultCode};
+use crate::constants::{PamFlag, PamResultCode};
 
 /// Opaque type, used as a pointer when making pam API calls.
 ///
@@ -16,7 +16,7 @@ pub struct PamHandle {
 }
 
 #[link(name = "pam")]
-extern "C" {
+unsafe extern "C" {
     fn pam_get_data(
         pamh: *const PamHandle,
         module_data_name: *const c_char,
@@ -77,15 +77,17 @@ impl PamHandle {
     /// The data stored under the provided key must be of type `T` otherwise the
     /// behaviour of this funtion is undefined.
     pub unsafe fn get_data<'a, T>(&'a self, key: &str) -> PamResult<&'a T> {
-        let c_key = CString::new(key).unwrap();
-        let mut ptr: *const libc::c_void = std::ptr::null();
-        let res = pam_get_data(self, c_key.as_ptr(), &mut ptr);
-        if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
-            let typed_ptr = ptr.cast::<T>();
-            let data: &T = &*typed_ptr;
-            Ok(data)
-        } else {
-            Err(res)
+        unsafe {
+            let c_key = CString::new(key).unwrap();
+            let mut ptr: *const libc::c_void = std::ptr::null();
+            let res = pam_get_data(self, c_key.as_ptr(), &mut ptr);
+            if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
+                let typed_ptr = ptr.cast::<T>();
+                let data: &T = &*typed_ptr;
+                Ok(data)
+            } else {
+                Err(res)
+            }
         }
     }
 
