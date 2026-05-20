@@ -28,7 +28,7 @@ pub const PAM_BINARY_PROMPT: PamMessageStyle = 7;
 // The Linux-PAM return values
 // see /usr/include/security/_pam_types.h
 #[allow(non_camel_case_types, dead_code)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum PamResultCode {
     PAM_SUCCESS = 0,

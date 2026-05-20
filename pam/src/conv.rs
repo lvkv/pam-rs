@@ -37,22 +37,30 @@ pub struct Inner {
 
 pub struct Conv<'a>(&'a Inner);
 
-impl<'a> Conv<'a> {
+impl Conv<'_> {
     /// Sends a message to the pam client.
     ///
     /// This will typically result in the user seeing a message or a prompt.
     /// There are several message styles available:
     ///
-    /// - PAM_PROMPT_ECHO_OFF
-    /// - PAM_PROMPT_ECHO_ON
-    /// - PAM_ERROR_MSG
-    /// - PAM_TEXT_INFO
-    /// - PAM_RADIO_TYPE
-    /// - PAM_BINARY_PROMPT
+    /// - `PAM_PROMPT_ECHO_OFF`
+    /// - `PAM_PROMPT_ECHO_ON`
+    /// - `PAM_ERROR_MSG`
+    /// - `PAM_TEXT_INFO`
+    /// - `PAM_RADIO_TYPE`
+    /// - `PAM_BINARY_PROMPT`
     ///
     /// Note that the user experience will depend on how the client implements
     /// these message styles - and not all applications implement all message
     /// styles.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the underlying PAM conversation call fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided message contains a nul byte.
     pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<&CStr>> {
         let mut resp_ptr: *const PamResponse = ptr::null();
         let msg_cstr = CString::new(msg).unwrap();
@@ -77,7 +85,7 @@ impl<'a> Conv<'a> {
     }
 }
 
-impl<'a> Item for Conv<'a> {
+impl Item for Conv<'_> {
     type Raw = Inner;
 
     fn type_id() -> crate::items::ItemType {
@@ -89,6 +97,6 @@ impl<'a> Item for Conv<'a> {
     }
 
     fn into_raw(self) -> *const Self::Raw {
-        self.0 as _
+        std::ptr::from_ref(self.0)
     }
 }

@@ -11,15 +11,13 @@ fn test_username_example_module() {
     );
 
     let expected_stdout = "pamtester: successfully opened a session\n";
-    let expected_stderr = format!("username: {}\n", test_username);
+    let expected_stderr = format!("username: {test_username}\n");
     let actual_stdout = String::from_utf8_lossy(&output.stdout);
     let actual_stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(
         output.status.success(),
-        "stdout: {} stderr: {}",
-        actual_stdout,
-        actual_stderr
+        "stdout: {actual_stdout} stderr: {actual_stderr}"
     );
     assert_eq!(expected_stdout, String::from_utf8_lossy(&output.stdout));
     assert_eq!(expected_stderr, String::from_utf8_lossy(&output.stderr));

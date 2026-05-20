@@ -7,10 +7,11 @@ pub fn pamtester(example: &str, service_lines: &[&str], user: Option<&str>, op: 
     let test_dir = tempfile::tempdir().unwrap();
     let user = user.unwrap_or("user");
     let svc = "test";
-    let contents: String = service_lines
-        .iter()
-        .map(|line| format!("{line} {}\n", module.display()))
-        .collect();
+    let mut contents = String::new();
+    for line in service_lines {
+        use std::fmt::Write;
+        writeln!(contents, "{line} {}", module.display()).unwrap();
+    }
     std::fs::write(test_dir.path().join(svc), contents).unwrap();
     Command::new("bwrap")
         .args(["--bind", "/", "/"])
@@ -40,5 +41,5 @@ fn example_module_path(name: &str) -> PathBuf {
         .and_then(|deps| deps.parent())
         .unwrap()
         .join("examples")
-        .join(format!("lib{}.so", name))
+        .join(format!("lib{name}.so"))
 }

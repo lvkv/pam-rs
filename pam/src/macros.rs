@@ -40,7 +40,7 @@ macro_rules! pam_hooks {
 
             fn extract_argv<'a>(argc: c_int, argv: *const *const c_char) -> Vec<&'a CStr> {
                 (0..argc)
-                    .map(|o| unsafe { CStr::from_ptr(*argv.offset(o as isize) as *const c_char) })
+                    .map(|o| unsafe { CStr::from_ptr(*argv.offset(o as isize)) })
                     .collect()
             }
 
