@@ -134,20 +134,15 @@ impl PamHandle {
     /// Returns an error if the underlying PAM function call fails.
     pub fn get_item<T: crate::items::Item>(&self) -> PamResult<Option<T>> {
         let mut ptr: *const libc::c_void = std::ptr::null();
-        let (res, item) = unsafe {
-            let r = pam_get_item(self, T::type_id(), &mut ptr);
-            let typed_ptr = ptr.cast::<T::Raw>();
-            let t = if typed_ptr.is_null() {
-                None
-            } else {
-                Some(T::from_raw(typed_ptr))
-            };
-            (r, t)
-        };
-        if PamResultCode::PAM_SUCCESS == res {
-            Ok(item)
+        let res = unsafe { pam_get_item(self, T::type_id(), &mut ptr) };
+        if PamResultCode::PAM_SUCCESS != res {
+            return Err(res);
+        }
+        let typed_ptr = ptr.cast::<T::Raw>();
+        if typed_ptr.is_null() {
+            Ok(None)
         } else {
-            Err(res)
+            Ok(Some(unsafe { T::from_raw(typed_ptr) }))
         }
     }
 
