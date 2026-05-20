@@ -8,7 +8,7 @@ pub enum ItemType {
     Tty = 3,
     /// The remote host name
     RHost = 4,
-    /// The pam_conv structure
+    /// The `pam_conv` structure
     Conv = 5,
     /// The authentication token (password)
     AuthTok = 6,
@@ -24,7 +24,7 @@ pub enum ItemType {
     XDisplay = 11,
     /// X :server authentication data
     XAuthData = 12,
-    /// The type for pam_get_authtok
+    /// The type for `pam_get_authtok`
     AuthTokType = 13,
 }
 

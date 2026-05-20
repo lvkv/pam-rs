@@ -72,6 +72,10 @@ impl PamHandle {
     ///
     /// Returns an error if the underlying PAM function call fails.
     ///
+    /// # Panics
+    ///
+    /// Panics if the provided key contains a nul byte.
+    ///
     /// # Safety
     ///
     /// The data stored under the provided key must be of type `T` otherwise the
@@ -100,6 +104,10 @@ impl PamHandle {
     /// # Errors
     ///
     /// Returns an error if the underlying PAM function call fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided key contains a nul byte.
     pub fn set_data<T>(&self, key: &str, data: Box<T>) -> PamResult<()> {
         let c_key = CString::new(key).unwrap();
         let res = unsafe {
@@ -186,18 +194,13 @@ impl PamHandle {
     /// Panics if the provided prompt string contains a nul byte
     pub fn get_user(&self, prompt: Option<&str>) -> PamResult<String> {
         let mut ptr: *const c_char = std::ptr::null_mut();
-        let prompt_string;
-        let c_prompt = match prompt {
-            Some(p) => {
-                prompt_string = CString::new(p).unwrap();
-                prompt_string.as_ptr()
-            }
-            None => std::ptr::null(),
-        };
+        let prompt_string = prompt.map(|p| CString::new(p).unwrap());
+        let c_prompt = prompt_string
+            .as_ref()
+            .map_or(std::ptr::null(), |s| s.as_ptr());
         let res = unsafe { pam_get_user(self, &mut ptr, c_prompt) };
         if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
-            let const_ptr = ptr as *const c_char;
-            let bytes = unsafe { CStr::from_ptr(const_ptr).to_bytes() };
+            let bytes = unsafe { CStr::from_ptr(ptr).to_bytes() };
             String::from_utf8(bytes.to_vec()).map_err(|_| PamResultCode::PAM_CONV_ERR)
         } else {
             Err(res)

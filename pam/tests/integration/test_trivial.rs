@@ -11,9 +11,7 @@ fn test_trivial_example_module() {
 
     assert!(
         output.status.success(),
-        "stdout: {} stderr: {}",
-        actual_stdout,
-        actual_stderr
+        "stdout: {actual_stdout} stderr: {actual_stderr}"
     );
     assert_eq!(expected_stdout, actual_stdout);
     assert_eq!(expected_stderr, actual_stderr);
