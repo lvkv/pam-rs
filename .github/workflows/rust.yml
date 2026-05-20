@@ -70,6 +70,26 @@ jobs:
             --doc \
             --release
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Clippy
+        run: |
+          cargo clippy \
+            --workspace \
+            --all-features \
+            --all-targets \
+            -- \
+            --deny clippy::all \
+            --deny clippy::pedantic \
+            --deny clippy::nursery \
+            --deny clippy::cargo \
+            --deny warnings
+
   documentation:
     runs-on: ubuntu-latest
     env:
