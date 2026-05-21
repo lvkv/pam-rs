@@ -81,17 +81,15 @@ impl PamHandle {
     /// The data stored under the provided key must be of type `T` otherwise the
     /// behaviour of this function is undefined.
     pub unsafe fn get_data<'a, T>(&'a self, key: &str) -> PamResult<&'a T> {
-        unsafe {
-            let c_key = CString::new(key).unwrap();
-            let mut ptr: *const libc::c_void = std::ptr::null();
-            let res = pam_get_data(self, c_key.as_ptr(), &mut ptr);
-            if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
-                let typed_ptr = ptr.cast::<T>();
-                let data: &T = &*typed_ptr;
-                Ok(data)
-            } else {
-                Err(res)
-            }
+        let c_key = CString::new(key).unwrap();
+        let mut ptr: *const libc::c_void = std::ptr::null();
+        let res = unsafe { pam_get_data(self, c_key.as_ptr(), &mut ptr) };
+        if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
+            let typed_ptr = ptr.cast::<T>();
+            let data: &T = unsafe { &*typed_ptr };
+            Ok(data)
+        } else {
+            Err(res)
         }
     }
 
@@ -193,7 +191,7 @@ impl PamHandle {
     ///
     /// Panics if the provided prompt string contains a nul byte
     pub fn get_user(&self, prompt: Option<&str>) -> PamResult<String> {
-        let mut ptr: *const c_char = std::ptr::null_mut();
+        let mut ptr: *const c_char = std::ptr::null();
         let prompt_string = prompt.map(|p| CString::new(p).unwrap());
         let c_prompt = prompt_string
             .as_ref()
