@@ -61,7 +61,7 @@ impl Conv<'_> {
     /// # Panics
     ///
     /// Panics if the provided message contains a nul byte.
-    pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<&CStr>> {
+    pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<CString>> {
         let mut resp_ptr: *const PamResponse = ptr::null();
         let msg_cstr = CString::new(msg).unwrap();
         let msg = PamMessage {
@@ -70,18 +70,25 @@ impl Conv<'_> {
         };
 
         let ret = (self.0.conv)(1, &&msg, &mut resp_ptr, self.0.appdata_ptr);
-
-        if PamResultCode::PAM_SUCCESS == ret {
-            // PamResponse.resp is null for styles that don't return user input like PAM_TEXT_INFO
-            let response = unsafe { (*resp_ptr).resp };
-            if response.is_null() {
-                Ok(None)
-            } else {
-                Ok(Some(unsafe { CStr::from_ptr(response) }))
-            }
-        } else {
-            Err(ret)
+        if PamResultCode::PAM_SUCCESS != ret {
+            return Err(ret);
         }
+        if resp_ptr.is_null() {
+            return Err(PamResultCode::PAM_CONV_ERR);
+        }
+
+        // PAM spec: the module owns freeing the response array and each resp string.
+        let resp_field = unsafe { (*resp_ptr).resp };
+        // resp is null for message styles that don't yield input, e.g. PAM_TEXT_INFO.
+        let response = if resp_field.is_null() {
+            None
+        } else {
+            let owned = unsafe { CStr::from_ptr(resp_field) }.to_owned();
+            unsafe { libc::free(resp_field.cast_mut().cast()) };
+            Some(owned)
+        };
+        unsafe { libc::free(resp_ptr.cast_mut().cast()) };
+        Ok(response)
     }
 }
 
