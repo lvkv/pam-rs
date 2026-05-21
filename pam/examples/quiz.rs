@@ -2,7 +2,6 @@ use pam::constants::{PAM_PROMPT_ECHO_ON, PamFlag, PamResultCode};
 use pam::conv::Conv;
 use pam::module::{PamHandle, PamHooks};
 use pam::{pam_hooks, pam_try};
-use rand::Rng;
 use std::ffi::CStr;
 use std::str::FromStr;
 
@@ -17,12 +16,7 @@ impl PamHooks for Quiz {
             Err(err) => return err,
         };
 
-        let mut rng = rand::thread_rng();
-        let a = rng.gen_range(0..100);
-        let b = rng.gen_range(0..100);
-        let prompt = format!("{a} + {b} = ");
-
-        let response = pam_try!(conv.send(PAM_PROMPT_ECHO_ON, &prompt));
+        let response = pam_try!(conv.send(PAM_PROMPT_ECHO_ON, "2 + 3 = "));
         let Some(response) = response else {
             return PamResultCode::PAM_CONV_ERR;
         };
@@ -30,7 +24,7 @@ impl PamHooks for Quiz {
         let response = pam_try!(response.to_str(), PamResultCode::PAM_AUTH_ERR);
         let answer = pam_try!(u32::from_str(response), PamResultCode::PAM_AUTH_ERR);
 
-        if answer == a + b {
+        if answer == 5 {
             PamResultCode::PAM_SUCCESS
         } else {
             PamResultCode::PAM_AUTH_ERR
