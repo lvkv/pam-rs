@@ -1,11 +1,11 @@
 use crate::harness::pamtester;
 
 #[test]
-fn test_trivial_example_module() {
-    let output = pamtester("trivial", &["auth required"], None, "authenticate", &[]);
+fn test_quiz_example_module() {
+    let output = pamtester("quiz", &["auth required"], None, "authenticate", b"5\n");
 
     let expected_stdout = "pamtester: successfully authenticated\n";
-    let expected_stderr = "";
+    let expected_stderr = "2 + 3 = ";
     let actual_stdout = String::from_utf8_lossy(&output.stdout);
     let actual_stderr = String::from_utf8_lossy(&output.stderr);
 

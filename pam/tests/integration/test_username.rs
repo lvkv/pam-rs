@@ -8,6 +8,7 @@ fn test_username_example_module() {
         &["session required"],
         Some(test_username),
         "open_session",
+        &[],
     );
 
     let expected_stdout = "pamtester: successfully opened a session\n";

@@ -1,9 +1,16 @@
 use std::fmt::Write;
+use std::io::Write as _;
 use std::path::PathBuf;
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 use std::sync::OnceLock;
 
-pub fn pamtester(example: &str, service_lines: &[&str], user: Option<&str>, op: &str) -> Output {
+pub fn pamtester(
+    example: &str,
+    service_lines: &[&str],
+    user: Option<&str>,
+    op: &str,
+    stdin: &[u8],
+) -> Output {
     let module = example_module_path(example);
     let test_dir = tempfile::tempdir().unwrap();
     let user = user.unwrap_or("user");
@@ -13,13 +20,19 @@ pub fn pamtester(example: &str, service_lines: &[&str], user: Option<&str>, op: 
         writeln!(contents, "{line} {}", module.display()).unwrap();
     }
     std::fs::write(test_dir.path().join(svc), contents).unwrap();
-    Command::new("bwrap")
+    let mut child = Command::new("bwrap")
         .args(["--bind", "/", "/"])
         .args(["--bind", &test_dir.path().to_string_lossy(), "/etc/pam.d"])
         .args(["--dev", "/dev"])
         .args(["pamtester", svc, user, op])
-        .output()
-        .unwrap()
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    // Write stdin and close it so the child sees EOF.
+    child.stdin.take().unwrap().write_all(stdin).unwrap();
+    child.wait_with_output().unwrap()
 }
 
 fn example_module_path(name: &str) -> PathBuf {
