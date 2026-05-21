@@ -79,7 +79,7 @@ impl PamHandle {
     /// # Safety
     ///
     /// The data stored under the provided key must be of type `T` otherwise the
-    /// behaviour of this funtion is undefined.
+    /// behaviour of this function is undefined.
     pub unsafe fn get_data<'a, T>(&'a self, key: &str) -> PamResult<&'a T> {
         unsafe {
             let c_key = CString::new(key).unwrap();

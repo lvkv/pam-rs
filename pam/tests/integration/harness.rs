@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::OnceLock;
@@ -9,7 +10,6 @@ pub fn pamtester(example: &str, service_lines: &[&str], user: Option<&str>, op: 
     let svc = "test";
     let mut contents = String::new();
     for line in service_lines {
-        use std::fmt::Write;
         writeln!(contents, "{line} {}", module.display()).unwrap();
     }
     std::fs::write(test_dir.path().join(svc), contents).unwrap();
