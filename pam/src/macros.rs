@@ -51,8 +51,10 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                let args = extract_argv(argc, argv);
-                super::$ident::acct_mgmt(pamh, args, flags)
+                $crate::macros::__panic_guard(|| {
+                    let args = extract_argv(argc, argv);
+                    super::$ident::acct_mgmt(pamh, args, flags)
+                })
             }
 
             #[unsafe(no_mangle)]
@@ -62,8 +64,10 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                let args = extract_argv(argc, argv);
-                super::$ident::sm_authenticate(pamh, args, flags)
+                $crate::macros::__panic_guard(|| {
+                    let args = extract_argv(argc, argv);
+                    super::$ident::sm_authenticate(pamh, args, flags)
+                })
             }
 
             #[unsafe(no_mangle)]
@@ -73,8 +77,10 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                let args = extract_argv(argc, argv);
-                super::$ident::sm_chauthtok(pamh, args, flags)
+                $crate::macros::__panic_guard(|| {
+                    let args = extract_argv(argc, argv);
+                    super::$ident::sm_chauthtok(pamh, args, flags)
+                })
             }
 
             #[unsafe(no_mangle)]
@@ -84,8 +90,10 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                let args = extract_argv(argc, argv);
-                super::$ident::sm_close_session(pamh, args, flags)
+                $crate::macros::__panic_guard(|| {
+                    let args = extract_argv(argc, argv);
+                    super::$ident::sm_close_session(pamh, args, flags)
+                })
             }
 
             #[unsafe(no_mangle)]
@@ -95,8 +103,10 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                let args = extract_argv(argc, argv);
-                super::$ident::sm_open_session(pamh, args, flags)
+                $crate::macros::__panic_guard(|| {
+                    let args = extract_argv(argc, argv);
+                    super::$ident::sm_open_session(pamh, args, flags)
+                })
             }
 
             #[unsafe(no_mangle)]
@@ -106,8 +116,10 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                let args = extract_argv(argc, argv);
-                super::$ident::sm_setcred(pamh, args, flags)
+                $crate::macros::__panic_guard(|| {
+                    let args = extract_argv(argc, argv);
+                    super::$ident::sm_setcred(pamh, args, flags)
+                })
             }
         }
     };
@@ -129,12 +141,27 @@ macro_rules! pam_try {
     };
 }
 
+#[doc(hidden)]
+pub fn __panic_guard<F: FnOnce() -> crate::constants::PamResultCode>(
+    f: F,
+) -> crate::constants::PamResultCode {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f))
+        .unwrap_or(crate::constants::PamResultCode::PAM_ABORT)
+}
+
 #[cfg(test)]
 pub mod test {
+    use crate::constants::PamResultCode;
     use crate::module::PamHooks;
 
     struct Foo;
     impl PamHooks for Foo {}
 
     pam_hooks!(Foo);
+
+    #[test]
+    fn panic_returns_error_code() {
+        let code = super::__panic_guard(|| panic!("intentional"));
+        assert_eq!(code, PamResultCode::PAM_ABORT);
+    }
 }
