@@ -56,14 +56,11 @@ impl Conv<'_> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the underlying PAM conversation call fails.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided message contains a nul byte.
+    /// - [`PamResultCode`] if the conversation call fails.
+    /// - [`PamResultCode::PAM_BUF_ERR`] if the message string bytes contain an internal 0 byte.
     pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<CString>> {
         let mut resp_ptr: *const PamResponse = ptr::null();
-        let msg_cstr = CString::new(msg).unwrap();
+        let msg_cstr = CString::new(msg).map_err(|_| PamResultCode::PAM_BUF_ERR)?;
         let msg = PamMessage {
             msg_style: style,
             msg: msg_cstr.as_ptr(),

@@ -70,18 +70,15 @@ impl PamHandle {
     ///
     /// # Errors
     ///
-    /// Returns an error if the underlying PAM function call fails.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided key contains a nul byte.
+    /// - [`PamResultCode`] if the lookup itself fails.
+    /// - [`PamResultCode::PAM_BUF_ERR`] if the key string bytes contain an internal 0 byte.
     ///
     /// # Safety
     ///
     /// The data stored under the provided key must be of type `T` otherwise the
     /// behaviour of this function is undefined.
     pub unsafe fn get_data<'a, T>(&'a self, key: &str) -> PamResult<&'a T> {
-        let c_key = CString::new(key).unwrap();
+        let c_key = CString::new(key).map_err(|_| PamResultCode::PAM_BUF_ERR)?;
         let mut ptr: *const libc::c_void = std::ptr::null();
         let res = unsafe { pam_get_data(self, c_key.as_ptr(), &mut ptr) };
         if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
@@ -101,13 +98,10 @@ impl PamHandle {
     ///
     /// # Errors
     ///
-    /// Returns an error if the underlying PAM function call fails.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided key contains a nul byte.
+    /// - [`PamResultCode`] if the store itself fails.
+    /// - [`PamResultCode::PAM_BUF_ERR`] if the key string contains a 0 byte.
     pub fn set_data<T>(&self, key: &str, data: Box<T>) -> PamResult<()> {
-        let c_key = CString::new(key).unwrap();
+        let c_key = CString::new(key).map_err(|_| PamResultCode::PAM_BUF_ERR)?;
         let res = unsafe {
             pam_set_data(
                 self,
@@ -180,14 +174,14 @@ impl PamHandle {
     ///
     /// # Errors
     ///
-    /// Returns an error if the underlying PAM function call fails.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided prompt string contains a nul byte
+    /// - [`PamResultCode`] if the lookup itself fails.
+    /// - [`PamResultCode::PAM_BUF_ERR`] if the prompt string contains a 0 byte.
     pub fn get_user(&self, prompt: Option<&str>) -> PamResult<String> {
         let mut ptr: *const c_char = std::ptr::null();
-        let prompt_string = prompt.map(|p| CString::new(p).unwrap());
+        let prompt_string = prompt
+            .map(CString::new)
+            .transpose()
+            .map_err(|_| PamResultCode::PAM_BUF_ERR)?;
         let c_prompt = prompt_string
             .as_ref()
             .map_or(std::ptr::null(), |s| s.as_ptr());
