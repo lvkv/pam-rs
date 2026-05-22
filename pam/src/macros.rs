@@ -150,6 +150,7 @@ pub fn __panic_guard<F: FnOnce() -> crate::constants::PamResultCode>(
 }
 
 #[cfg(test)]
+#[allow(clippy::panic)]
 pub mod test {
     use crate::constants::PamResultCode;
     use crate::module::PamHooks;

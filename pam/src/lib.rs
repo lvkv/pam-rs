@@ -35,6 +35,14 @@
 //!
 //! The goal of this library is to provide a simple, type-safe API to write
 //! these modules.
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::todo,
+    clippy::unimplemented
+)]
 
 pub mod constants;
 pub mod conv;
