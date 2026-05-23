@@ -2,6 +2,7 @@
 
 use libc::c_char;
 use std::ffi::{CStr, CString};
+use std::marker::PhantomData;
 
 use crate::constants::{PamFlag, PamResultCode};
 
@@ -13,6 +14,14 @@ use crate::constants::{PamFlag, PamResultCode};
 #[repr(C)]
 pub struct PamHandle {
     _data: [u8; 0],
+    /// Force `!Send + !Sync`.
+    ///
+    /// PAM handles are not thread-safe. From the [man page for `pam(3)`][1]:
+    /// > The libpam interfaces are only thread-safe if each thread within
+    /// > the multithreaded application uses its own PAM handle.
+    ///
+    /// [1]: https://man7.org/linux/man-pages/man3/pam.3.html
+    _marker: PhantomData<*const ()>,
 }
 
 #[link(name = "pam")]
