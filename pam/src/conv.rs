@@ -89,7 +89,7 @@ impl Conv<'_> {
     }
 }
 
-impl Item for Conv<'_> {
+impl<'a> Item<'a> for Conv<'a> {
     type Raw = Inner;
 
     fn type_id() -> crate::items::ItemType {
