@@ -135,7 +135,7 @@ impl PamHandle {
     /// # Errors
     ///
     /// Returns an error if the underlying PAM function call fails.
-    pub fn get_item<T: crate::items::Item>(&self) -> PamResult<Option<T>> {
+    pub fn get_item<'a, T: crate::items::Item<'a>>(&'a self) -> PamResult<Option<T>> {
         let mut ptr: *const libc::c_void = std::ptr::null();
         let res = unsafe { pam_get_item(self, T::type_id(), &mut ptr) };
         if PamResultCode::PAM_SUCCESS != res {
@@ -160,11 +160,7 @@ impl PamHandle {
     /// # Errors
     ///
     /// Returns an error if the underlying PAM function call fails.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided item key contains a nul byte
-    pub fn set_item_str<T: crate::items::Item>(&mut self, item: T) -> PamResult<()> {
+    pub fn set_item_str<'a, T: crate::items::Item<'a>>(&mut self, item: T) -> PamResult<()> {
         let res =
             unsafe { pam_set_item(self, T::type_id(), item.into_raw().cast::<libc::c_void>()) };
         if PamResultCode::PAM_SUCCESS == res {

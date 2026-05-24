@@ -28,8 +28,8 @@ pub enum ItemType {
     AuthTokType = 13,
 }
 
-// A type that can be requested by `pam::Handle::get_item`.
-pub trait Item {
+/// A type that can be requested by [`crate::module::PamHandle::get_item`].
+pub trait Item<'a> {
     /// The `repr(C)` type that is returned (by pointer) by the underlying `pam_get_item` function.
     type Raw;
 
@@ -40,7 +40,7 @@ pub trait Item {
     ///
     /// # Safety
     ///
-    /// This function can assume the pointer is a valid pointer to a `Self::Raw` instance.
+    /// This function can assume the pointer is a valid pointer to a `Self::Raw` instance valid for `'a`.
     unsafe fn from_raw(raw: *const Self::Raw) -> Self;
 
     /// The function to convert from this wrapper type to a C-compatible pointer.
@@ -59,7 +59,7 @@ macro_rules! cstr_item {
             }
         }
 
-        impl<'s> Item for $name<'s> {
+        impl<'s> Item<'s> for $name<'s> {
             type Raw = libc::c_char;
 
             fn type_id() -> ItemType {
