@@ -31,7 +31,7 @@ pub struct Inner {
         pam_message: &&PamMessage,
         pam_response: &mut *const PamResponse,
         appdata_ptr: *const libc::c_void,
-    ) -> PamResultCode,
+    ) -> c_int,
     appdata_ptr: *const libc::c_void,
 }
 
@@ -66,7 +66,8 @@ impl Conv<'_> {
             msg: msg_cstr.as_ptr(),
         };
 
-        let ret = (self.0.conv)(1, &&msg, &mut resp_ptr, self.0.appdata_ptr);
+        let ret =
+            PamResultCode::from_raw((self.0.conv)(1, &&msg, &mut resp_ptr, self.0.appdata_ptr));
         if PamResultCode::PAM_SUCCESS != ret {
             return Err(ret);
         }

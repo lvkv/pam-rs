@@ -1,6 +1,6 @@
 //! Functions for use in pam modules.
 
-use libc::c_char;
+use libc::{c_char, c_int};
 use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 
@@ -30,7 +30,7 @@ unsafe extern "C" {
         pamh: *const PamHandle,
         module_data_name: *const c_char,
         data: &mut *const libc::c_void,
-    ) -> PamResultCode;
+    ) -> c_int;
 
     fn pam_set_data(
         pamh: *const PamHandle,
@@ -39,30 +39,30 @@ unsafe extern "C" {
         cleanup: extern "C" fn(
             pamh: *const PamHandle,
             data: *mut libc::c_void,
-            error_status: PamResultCode,
+            error_status: c_int,
         ),
-    ) -> PamResultCode;
+    ) -> c_int;
 
     fn pam_get_item(
         pamh: *const PamHandle,
         item_type: crate::items::ItemType,
         item: &mut *const libc::c_void,
-    ) -> PamResultCode;
+    ) -> c_int;
 
     fn pam_set_item(
         pamh: *mut PamHandle,
         item_type: crate::items::ItemType,
         item: *const libc::c_void,
-    ) -> PamResultCode;
+    ) -> c_int;
 
     fn pam_get_user(
         pamh: *const PamHandle,
         user: &mut *const c_char,
         prompt: *const c_char,
-    ) -> PamResultCode;
+    ) -> c_int;
 }
 
-pub extern "C" fn cleanup<T>(_: *const PamHandle, c_data: *mut libc::c_void, _: PamResultCode) {
+extern "C" fn cleanup<T>(_: *const PamHandle, c_data: *mut libc::c_void, _: c_int) {
     unsafe {
         let _data: Box<T> = Box::from_raw(c_data.cast::<T>());
     }
@@ -89,7 +89,7 @@ impl PamHandle {
     pub unsafe fn get_data<'a, T>(&'a self, key: &str) -> PamResult<&'a T> {
         let c_key = CString::new(key).map_err(|_| PamResultCode::PAM_BUF_ERR)?;
         let mut ptr: *const libc::c_void = std::ptr::null();
-        let res = unsafe { pam_get_data(self, c_key.as_ptr(), &mut ptr) };
+        let res = PamResultCode::from_raw(unsafe { pam_get_data(self, c_key.as_ptr(), &mut ptr) });
         if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
             let typed_ptr = ptr.cast::<T>();
             let data: &T = unsafe { &*typed_ptr };
@@ -111,14 +111,14 @@ impl PamHandle {
     /// - [`PamResultCode::PAM_BUF_ERR`] if the key string contains a 0 byte.
     pub fn set_data<T>(&self, key: &str, data: Box<T>) -> PamResult<()> {
         let c_key = CString::new(key).map_err(|_| PamResultCode::PAM_BUF_ERR)?;
-        let res = unsafe {
+        let res = PamResultCode::from_raw(unsafe {
             pam_set_data(
                 self,
                 c_key.as_ptr(),
                 Box::into_raw(data).cast::<libc::c_void>(),
                 cleanup::<T>,
             )
-        };
+        });
         if PamResultCode::PAM_SUCCESS == res {
             Ok(())
         } else {
@@ -137,7 +137,7 @@ impl PamHandle {
     /// Returns an error if the underlying PAM function call fails.
     pub fn get_item<'a, T: crate::items::Item<'a>>(&'a self) -> PamResult<Option<T>> {
         let mut ptr: *const libc::c_void = std::ptr::null();
-        let res = unsafe { pam_get_item(self, T::type_id(), &mut ptr) };
+        let res = PamResultCode::from_raw(unsafe { pam_get_item(self, T::type_id(), &mut ptr) });
         if PamResultCode::PAM_SUCCESS != res {
             return Err(res);
         }
@@ -161,8 +161,9 @@ impl PamHandle {
     ///
     /// Returns an error if the underlying PAM function call fails.
     pub fn set_item_str<'a, T: crate::items::Item<'a>>(&mut self, item: T) -> PamResult<()> {
-        let res =
-            unsafe { pam_set_item(self, T::type_id(), item.into_raw().cast::<libc::c_void>()) };
+        let res = PamResultCode::from_raw(unsafe {
+            pam_set_item(self, T::type_id(), item.into_raw().cast::<libc::c_void>())
+        });
         if PamResultCode::PAM_SUCCESS == res {
             Ok(())
         } else {
@@ -190,7 +191,7 @@ impl PamHandle {
         let c_prompt = prompt_string
             .as_ref()
             .map_or(std::ptr::null(), |s| s.as_ptr());
-        let res = unsafe { pam_get_user(self, &mut ptr, c_prompt) };
+        let res = PamResultCode::from_raw(unsafe { pam_get_user(self, &mut ptr, c_prompt) });
         if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
             let bytes = unsafe { CStr::from_ptr(ptr).to_bytes() };
             String::from_utf8(bytes.to_vec()).map_err(|_| PamResultCode::PAM_CONV_ERR)
