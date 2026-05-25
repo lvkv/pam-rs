@@ -36,3 +36,7 @@ crate-type = ["cdylib"]
 [[example]]
 name = "quiz"
 crate-type = ["cdylib"]
+
+[[example]]
+name = "data"
+crate-type = ["cdylib"]
