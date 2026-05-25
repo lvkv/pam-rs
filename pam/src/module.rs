@@ -33,7 +33,7 @@ unsafe extern "C" {
     ) -> c_int;
 
     fn pam_set_data(
-        pamh: *const PamHandle,
+        pamh: *mut PamHandle,
         module_data_name: *const c_char,
         data: *mut libc::c_void,
         cleanup: extern "C" fn(
@@ -109,19 +109,21 @@ impl PamHandle {
     ///
     /// - [`PamResultCode`] if the store itself fails.
     /// - [`PamResultCode::PAM_BUF_ERR`] if the key string contains a 0 byte.
-    pub fn set_data<T>(&self, key: &str, data: Box<T>) -> PamResult<()> {
+    pub fn set_data<T: 'static>(&mut self, key: &str, data: Box<T>) -> PamResult<()> {
         let c_key = CString::new(key).map_err(|_| PamResultCode::PAM_BUF_ERR)?;
+        let ptr = Box::into_raw(data);
         let res = PamResultCode::from_raw(unsafe {
             pam_set_data(
                 self,
                 c_key.as_ptr(),
-                Box::into_raw(data).cast::<libc::c_void>(),
+                ptr.cast::<libc::c_void>(),
                 cleanup::<T>,
             )
         });
         if PamResultCode::PAM_SUCCESS == res {
             Ok(())
         } else {
+            drop(unsafe { Box::from_raw(ptr) });
             Err(res)
         }
     }
