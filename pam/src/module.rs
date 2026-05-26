@@ -63,8 +63,17 @@ unsafe extern "C" {
 }
 
 extern "C" fn cleanup<T>(_: *const PamHandle, c_data: *mut libc::c_void, _: c_int) {
-    unsafe {
+    // A panic on Drop for T must not unwind across the C boundary
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
         let _data: Box<T> = Box::from_raw(c_data.cast::<T>());
+    }));
+    // Dropping the above result can itself panic, and is surprisingly difficult to get right.
+    // From the docs for catch_unwind:
+    // > Finally, be careful in how you drop the result of this function. If it is Err, it contains the panic payload, and dropping that may in turn panic!
+    // See: https://internals.rust-lang.org/t/some-thoughts-on-a-less-slippery-catch-unwind/16902/4
+    if let Err(payload) = result {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(payload)))
+            .map_err(std::mem::forget);
     }
 }
 
@@ -258,5 +267,40 @@ pub trait PamHooks {
     /// authenticated but before a session has been established.
     fn sm_setcred(pamh: &mut PamHandle, args: Vec<&CStr>, flags: PamFlag) -> PamResultCode {
         PamResultCode::PAM_IGNORE
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::panic)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_handles_drop_panics() {
+        // Scenario 1
+        // T::drop panics
+        {
+            struct Bomb;
+            impl Drop for Bomb {
+                fn drop(&mut self) {
+                    panic!();
+                }
+            }
+            let ptr = Box::into_raw(Box::new(Bomb)).cast::<libc::c_void>();
+            cleanup::<Bomb>(std::ptr::null(), ptr, 0);
+        }
+
+        // Scenario 2
+        // Every payload's Drop spawns another panic
+        {
+            struct BombRecursive;
+            impl Drop for BombRecursive {
+                fn drop(&mut self) {
+                    std::panic::panic_any(Self);
+                }
+            }
+            let ptr = Box::into_raw(Box::new(BombRecursive)).cast::<libc::c_void>();
+            cleanup::<BombRecursive>(std::ptr::null(), ptr, 0);
+        }
     }
 }
