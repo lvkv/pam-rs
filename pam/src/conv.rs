@@ -15,7 +15,7 @@ struct PamMessage {
 
 #[repr(C)]
 struct PamResponse {
-    resp: *const c_char,
+    resp: *mut c_char,
     resp_retcode: libc::c_int, // Unused - always zero
 }
 
@@ -26,13 +26,15 @@ struct PamResponse {
 /// will be relayed back.
 #[repr(C)]
 pub struct Inner {
-    conv: extern "C" fn(
-        num_msg: c_int,
-        pam_message: &&PamMessage,
-        pam_response: &mut *const PamResponse,
-        appdata_ptr: *const libc::c_void,
-    ) -> c_int,
-    appdata_ptr: *const libc::c_void,
+    conv: Option<
+        extern "C" fn(
+            num_msg: c_int,
+            pam_message: *const *const PamMessage,
+            pam_response: *mut *mut PamResponse,
+            appdata_ptr: *mut libc::c_void,
+        ) -> c_int,
+    >,
+    appdata_ptr: *mut libc::c_void,
 }
 
 pub struct Conv<'a>(&'a Inner);
@@ -58,16 +60,26 @@ impl Conv<'_> {
     ///
     /// - [`PamResultCode`] if the conversation call fails.
     /// - [`PamResultCode::PAM_BUF_ERR`] if the message string bytes contain an internal 0 byte.
+    /// - [`PamResultCode::PAM_CONV_ERR`] if no conversation function was registered.
+    /// - [`PamResultCode::PAM_CONV_ERR`] if the conversation succeeds but yields a null response.
     pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<CString>> {
-        let mut resp_ptr: *const PamResponse = ptr::null();
+        let Some(conv_fn) = self.0.conv else {
+            return Err(PamResultCode::PAM_CONV_ERR);
+        };
+        let mut resp_ptr: *mut PamResponse = ptr::null_mut();
         let msg_cstr = CString::new(msg).map_err(|_| PamResultCode::PAM_BUF_ERR)?;
         let msg = PamMessage {
             msg_style: style,
             msg: msg_cstr.as_ptr(),
         };
+        let msg_ptr: *const PamMessage = &raw const msg;
 
-        let ret =
-            PamResultCode::from_raw((self.0.conv)(1, &&msg, &mut resp_ptr, self.0.appdata_ptr));
+        let ret = PamResultCode::from_raw(conv_fn(
+            1,
+            &raw const msg_ptr,
+            &raw mut resp_ptr,
+            self.0.appdata_ptr,
+        ));
         if PamResultCode::PAM_SUCCESS != ret {
             return Err(ret);
         }
@@ -82,10 +94,10 @@ impl Conv<'_> {
             None
         } else {
             let owned = unsafe { CStr::from_ptr(resp_field) }.to_owned();
-            unsafe { libc::free(resp_field.cast_mut().cast()) };
+            unsafe { libc::free(resp_field.cast()) };
             Some(owned)
         };
-        unsafe { libc::free(resp_ptr.cast_mut().cast()) };
+        unsafe { libc::free(resp_ptr.cast()) };
         Ok(response)
     }
 }
