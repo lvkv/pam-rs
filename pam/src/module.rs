@@ -81,6 +81,7 @@ impl PamHandle {
     ///
     /// - [`PamResultCode`] if the lookup itself fails.
     /// - [`PamResultCode::PAM_BUF_ERR`] if the key string bytes contain an internal 0 byte.
+    /// - [`PamResultCode::PAM_SYSTEM_ERR`] if PAM reports success but yields a null pointer.
     ///
     /// # Safety
     ///
@@ -90,13 +91,15 @@ impl PamHandle {
         let c_key = CString::new(key).map_err(|_| PamResultCode::PAM_BUF_ERR)?;
         let mut ptr: *const libc::c_void = std::ptr::null();
         let res = PamResultCode::from_raw(unsafe { pam_get_data(self, c_key.as_ptr(), &mut ptr) });
-        if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
-            let typed_ptr = ptr.cast::<T>();
-            let data: &T = unsafe { &*typed_ptr };
-            Ok(data)
-        } else {
-            Err(res)
+        if PamResultCode::PAM_SUCCESS != res {
+            return Err(res);
         }
+        if ptr.is_null() {
+            return Err(PamResultCode::PAM_SYSTEM_ERR);
+        }
+        let typed_ptr = ptr.cast::<T>();
+        let data: &T = unsafe { &*typed_ptr };
+        Ok(data)
     }
 
     /// Stores a value that can be retrieved later with `get_data`.  The value lives
@@ -184,6 +187,8 @@ impl PamHandle {
     ///
     /// - [`PamResultCode`] if the lookup itself fails.
     /// - [`PamResultCode::PAM_BUF_ERR`] if the prompt string contains a 0 byte.
+    /// - [`PamResultCode::PAM_SYSTEM_ERR`] if PAM reports success but yields a null pointer.
+    /// - [`PamResultCode::PAM_SYSTEM_ERR`] if the returned username is not valid UTF-8.
     pub fn get_user(&self, prompt: Option<&str>) -> PamResult<String> {
         let mut ptr: *const c_char = std::ptr::null();
         let prompt_string = prompt
@@ -194,12 +199,14 @@ impl PamHandle {
             .as_ref()
             .map_or(std::ptr::null(), |s| s.as_ptr());
         let res = PamResultCode::from_raw(unsafe { pam_get_user(self, &mut ptr, c_prompt) });
-        if PamResultCode::PAM_SUCCESS == res && !ptr.is_null() {
-            let bytes = unsafe { CStr::from_ptr(ptr).to_bytes() };
-            String::from_utf8(bytes.to_vec()).map_err(|_| PamResultCode::PAM_CONV_ERR)
-        } else {
-            Err(res)
+        if PamResultCode::PAM_SUCCESS != res {
+            return Err(res);
         }
+        if ptr.is_null() {
+            return Err(PamResultCode::PAM_SYSTEM_ERR);
+        }
+        let bytes = unsafe { CStr::from_ptr(ptr).to_bytes() };
+        String::from_utf8(bytes.to_vec()).map_err(|_| PamResultCode::PAM_SYSTEM_ERR)
     }
 }
 
