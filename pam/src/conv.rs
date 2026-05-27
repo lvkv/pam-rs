@@ -6,6 +6,7 @@ use crate::constants::PamMessageStyle;
 use crate::constants::PamResultCode;
 use crate::items::Item;
 use crate::module::PamResult;
+use crate::secret::{SecretBytes, zeroize_raw};
 
 #[repr(C)]
 struct PamMessage {
@@ -56,13 +57,18 @@ impl Conv<'_> {
     /// these message styles - and not all applications implement all message
     /// styles.
     ///
+    /// # Returns
+    ///
+    /// - [`SecretBytes`] carrying the user's reply.
+    /// - [`None`] if the conversation returns no input.
+    ///
     /// # Errors
     ///
     /// - [`PamResultCode`] if the conversation call fails.
     /// - [`PamResultCode::PAM_BUF_ERR`] if the message string bytes contain an internal 0 byte.
     /// - [`PamResultCode::PAM_CONV_ERR`] if no conversation function was registered.
-    /// - [`PamResultCode::PAM_CONV_ERR`] if the conversation succeeds but yields a null response.
-    pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<CString>> {
+    /// - [`PamResultCode::PAM_CONV_ERR`] if the conversation succeeds but returns a null response pointer.
+    pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<SecretBytes>> {
         let Some(conv_fn) = self.0.conv else {
             return Err(PamResultCode::PAM_CONV_ERR);
         };
@@ -93,9 +99,12 @@ impl Conv<'_> {
         let response = if resp_field.is_null() {
             None
         } else {
-            let owned = unsafe { CStr::from_ptr(resp_field) }.to_owned();
+            // Copy into a buffer that will be zeroed out when dropped
+            let bytes = unsafe { CStr::from_ptr(resp_field) }.to_bytes().to_vec();
+            // Zero out the libc buffer before freeing it
+            unsafe { zeroize_raw(resp_field.cast(), bytes.len()) };
             unsafe { libc::free(resp_field.cast()) };
-            Some(owned)
+            Some(SecretBytes::new(bytes))
         };
         unsafe { libc::free(resp_ptr.cast()) };
         Ok(response)
