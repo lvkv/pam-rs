@@ -55,7 +55,7 @@ jobs:
             --release
       - name: Run doc tests
         run: |
-          # Run all doc tests.
+          # Run all doc tests (debug).
           cargo test \
             --workspace \
             --all-features \
@@ -69,6 +69,22 @@ jobs:
             --verbose \
             --doc \
             --release
+
+  miri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - name: Run Miri
+        run: |
+          # Exclude integration tests that actually call into PAM.
+          cargo miri test \
+            --workspace \
+            --all-features \
+            --verbose \
+            --lib
 
   lint:
     runs-on: ubuntu-latest

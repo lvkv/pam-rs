@@ -63,7 +63,7 @@ unsafe extern "C" {
 }
 
 extern "C" fn cleanup<T>(_: *const PamHandle, c_data: *mut libc::c_void, _: c_int) {
-    // PAM should never hand us null here, but Box::from_raw(null) would be UB.
+    // Defensive null check, PAM shouldn't normally hand us null here
     if c_data.is_null() {
         return;
     }
