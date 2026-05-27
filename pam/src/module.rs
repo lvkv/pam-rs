@@ -63,6 +63,10 @@ unsafe extern "C" {
 }
 
 extern "C" fn cleanup<T>(_: *const PamHandle, c_data: *mut libc::c_void, _: c_int) {
+    // PAM should never hand us null here, but Box::from_raw(null) would be UB.
+    if c_data.is_null() {
+        return;
+    }
     // A panic on Drop for T must not unwind across the C boundary
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
         let _data: Box<T> = Box::from_raw(c_data.cast::<T>());
@@ -276,7 +280,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn cleanup_handles_drop_panics() {
+    fn cleanup_disaster_scenarios() {
+        // PAM is not expected to call cleanup with null data, but we must handle it regardless
+        cleanup::<String>(std::ptr::null(), std::ptr::null_mut(), 0);
+
         // Scenario 1
         // T::drop panics
         {
