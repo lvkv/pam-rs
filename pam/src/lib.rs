@@ -50,3 +50,4 @@ pub mod items;
 #[doc(hidden)]
 pub mod macros;
 pub mod module;
+pub mod secret;

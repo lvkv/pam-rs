@@ -21,7 +21,7 @@ impl PamHooks for Quiz {
             return PamResultCode::PAM_CONV_ERR;
         };
 
-        let response = pam_try!(response.to_str(), PamResultCode::PAM_AUTH_ERR);
+        let response = pam_try!(response.as_str(), PamResultCode::PAM_AUTH_ERR);
         let answer = pam_try!(u32::from_str(response), PamResultCode::PAM_AUTH_ERR);
 
         if answer == 5 {

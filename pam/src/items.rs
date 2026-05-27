@@ -82,7 +82,56 @@ cstr_item!(User);
 cstr_item!(Tty);
 cstr_item!(RHost);
 // Conv
-cstr_item!(AuthTok);
-cstr_item!(OldAuthTok);
 cstr_item!(RUser);
 cstr_item!(UserPrompt);
+
+macro_rules! secret_cstr_item {
+    ($name:ident, $doc:expr) => {
+        #[doc = $doc]
+        ///
+        /// Borrow into PAM-owned memory.
+        pub struct $name<'s>(&'s std::ffi::CStr);
+
+        impl<'s> $name<'s> {
+            /// Borrow the raw secret bytes without a null terminator.
+            #[must_use]
+            #[allow(clippy::missing_const_for_fn)]
+            pub fn as_bytes(&self) -> &[u8] {
+                self.0.to_bytes()
+            }
+
+            /// Return an owned copy of the bytes.
+            #[must_use]
+            pub fn to_owned_secret(&self) -> $crate::secret::SecretBytes {
+                $crate::secret::SecretBytes::new(self.0.to_bytes().to_vec())
+            }
+        }
+
+        impl std::fmt::Debug for $name<'_> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple(stringify!($name))
+                    .field(&"[redacted]")
+                    .finish()
+            }
+        }
+
+        impl<'s> Item<'s> for $name<'s> {
+            type Raw = libc::c_char;
+
+            fn type_id() -> ItemType {
+                ItemType::$name
+            }
+
+            unsafe fn from_raw(raw: *const Self::Raw) -> Self {
+                unsafe { Self(std::ffi::CStr::from_ptr(raw)) }
+            }
+
+            fn into_raw(self) -> *const Self::Raw {
+                self.0.as_ptr()
+            }
+        }
+    };
+}
+
+secret_cstr_item!(AuthTok, "The user's current authentication token.");
+secret_cstr_item!(OldAuthTok, "The user's previous authentication token.");
