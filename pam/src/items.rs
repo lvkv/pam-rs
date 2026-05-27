@@ -89,7 +89,7 @@ macro_rules! secret_cstr_item {
     ($name:ident, $doc:expr) => {
         #[doc = $doc]
         ///
-        /// Borrow into PAM-owned memory.
+        /// Borrow from PAM-owned memory.
         pub struct $name<'s>(&'s std::ffi::CStr);
 
         impl<'s> $name<'s> {
