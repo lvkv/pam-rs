@@ -4,6 +4,9 @@ use std::ptr;
 
 use crate::constants::PamMessageStyle;
 use crate::constants::PamResultCode;
+use crate::constants::{
+    PAM_ERROR_MSG, PAM_PROMPT_ECHO_OFF, PAM_PROMPT_ECHO_ON, PAM_RADIO_TYPE, PAM_TEXT_INFO,
+};
 use crate::items::Item;
 use crate::module::PamResult;
 use crate::secret::{SecretBytes, zeroize_raw};
@@ -51,7 +54,6 @@ impl Conv<'_> {
     /// - `PAM_ERROR_MSG`
     /// - `PAM_TEXT_INFO`
     /// - `PAM_RADIO_TYPE`
-    /// - `PAM_BINARY_PROMPT`
     ///
     /// Note that the user experience will depend on how the client implements
     /// these message styles - and not all applications implement all message
@@ -68,7 +70,14 @@ impl Conv<'_> {
     /// - [`PamResultCode::PAM_BUF_ERR`] if the message string bytes contain an internal 0 byte.
     /// - [`PamResultCode::PAM_CONV_ERR`] if no conversation function was registered.
     /// - [`PamResultCode::PAM_CONV_ERR`] if the conversation succeeds but returns a null response pointer.
+    /// - [`PamResultCode::PAM_CONV_ERR`] if `style` is unsupported.
     pub fn send(&self, style: PamMessageStyle, msg: &str) -> PamResult<Option<SecretBytes>> {
+        // Only string-based styles are supported; binary prompts and unknown styles are rejected.
+        match style {
+            PAM_PROMPT_ECHO_OFF | PAM_PROMPT_ECHO_ON | PAM_ERROR_MSG | PAM_TEXT_INFO
+            | PAM_RADIO_TYPE => {}
+            _ => return Err(PamResultCode::PAM_CONV_ERR),
+        }
         let Some(conv_fn) = self.0.conv else {
             return Err(PamResultCode::PAM_CONV_ERR);
         };
@@ -124,5 +133,81 @@ impl<'a> Item<'a> for Conv<'a> {
 
     fn into_raw(self) -> *const Self::Raw {
         std::ptr::from_ref(self.0)
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::panic, clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::constants::PAM_BINARY_PROMPT;
+
+    /// A conversation function that should never run used for testing.
+    extern "C" fn unreachable_conv(
+        _: c_int,
+        _: *const *const PamMessage,
+        _: *mut *mut PamResponse,
+        _: *mut libc::c_void,
+    ) -> c_int {
+        panic!("this conversation function shouldn't run");
+    }
+
+    /// A test case for the [`Conv::send`] method.
+    struct SendTestCase {
+        inner: Inner,
+        style: PamMessageStyle,
+        expected: PamResult<Option<SecretBytes>>,
+        message: &'static str,
+    }
+
+    #[test]
+    fn send_error_cases() {
+        let test_cases: Vec<SendTestCase> = vec![
+            // Error on binary prompt
+            SendTestCase {
+                inner: Inner {
+                    conv: Some(unreachable_conv),
+                    appdata_ptr: ptr::null_mut(),
+                },
+                style: PAM_BINARY_PROMPT,
+                expected: Err(PamResultCode::PAM_CONV_ERR),
+                message: "",
+            },
+            // Error on unknown style
+            SendTestCase {
+                inner: Inner {
+                    conv: Some(unreachable_conv),
+                    appdata_ptr: ptr::null_mut(),
+                },
+                style: c_int::MIN,
+                expected: Err(PamResultCode::PAM_CONV_ERR),
+                message: "",
+            },
+            // Error if no conversation function is provided
+            SendTestCase {
+                inner: Inner {
+                    conv: None,
+                    appdata_ptr: ptr::null_mut(),
+                },
+                style: PAM_BINARY_PROMPT,
+                expected: Err(PamResultCode::PAM_CONV_ERR),
+                message: "",
+            },
+            // Error if message contains internal 0 byte
+            SendTestCase {
+                inner: Inner {
+                    conv: Some(unreachable_conv),
+                    appdata_ptr: ptr::null_mut(),
+                },
+                style: PAM_PROMPT_ECHO_OFF,
+                expected: Err(PamResultCode::PAM_BUF_ERR),
+                message: "PAM is fun\0sometimes",
+            },
+        ];
+
+        for test_case in test_cases {
+            let actual = Conv(&test_case.inner).send(test_case.style, test_case.message);
+            assert_eq!(test_case.expected.unwrap_err(), actual.unwrap_err());
+        }
     }
 }
