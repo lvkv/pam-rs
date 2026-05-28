@@ -23,7 +23,6 @@ pub const PAM_ERROR_MSG: PamMessageStyle = 3;
 pub const PAM_TEXT_INFO: PamMessageStyle = 4;
 pub const PAM_RADIO_TYPE: PamMessageStyle = 5;
 // Intentionally not public: we don't yet have a send API for this style.
-// Kept to document the reserved value and to exercise rejection in tests.
 #[allow(dead_code)]
 pub(crate) const PAM_BINARY_PROMPT: PamMessageStyle = 7;
 

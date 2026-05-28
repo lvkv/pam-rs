@@ -189,7 +189,7 @@ mod tests {
                     conv: None,
                     appdata_ptr: ptr::null_mut(),
                 },
-                style: PAM_BINARY_PROMPT,
+                style: PAM_PROMPT_ECHO_OFF,
                 expected: Err(PamResultCode::PAM_CONV_ERR),
                 message: "",
             },
