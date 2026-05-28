@@ -52,12 +52,11 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                $crate::macros::__panic_guard(|| {
-                    match unsafe { $crate::macros::extract_argv(argc, argv) } {
-                        Ok(args) => super::$ident::acct_mgmt(pamh, args, flags),
-                        Err(e) => e,
-                    }
-                })
+                unsafe {
+                    $crate::macros::invoke_hook(argc, argv, |args| {
+                        super::$ident::acct_mgmt(pamh, args, flags)
+                    })
+                }
             }
 
             #[unsafe(no_mangle)]
@@ -67,12 +66,11 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                $crate::macros::__panic_guard(|| {
-                    match unsafe { $crate::macros::extract_argv(argc, argv) } {
-                        Ok(args) => super::$ident::sm_authenticate(pamh, args, flags),
-                        Err(e) => e,
-                    }
-                })
+                unsafe {
+                    $crate::macros::invoke_hook(argc, argv, |args| {
+                        super::$ident::sm_authenticate(pamh, args, flags)
+                    })
+                }
             }
 
             #[unsafe(no_mangle)]
@@ -82,12 +80,11 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                $crate::macros::__panic_guard(|| {
-                    match unsafe { $crate::macros::extract_argv(argc, argv) } {
-                        Ok(args) => super::$ident::sm_chauthtok(pamh, args, flags),
-                        Err(e) => e,
-                    }
-                })
+                unsafe {
+                    $crate::macros::invoke_hook(argc, argv, |args| {
+                        super::$ident::sm_chauthtok(pamh, args, flags)
+                    })
+                }
             }
 
             #[unsafe(no_mangle)]
@@ -97,12 +94,11 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                $crate::macros::__panic_guard(|| {
-                    match unsafe { $crate::macros::extract_argv(argc, argv) } {
-                        Ok(args) => super::$ident::sm_close_session(pamh, args, flags),
-                        Err(e) => e,
-                    }
-                })
+                unsafe {
+                    $crate::macros::invoke_hook(argc, argv, |args| {
+                        super::$ident::sm_close_session(pamh, args, flags)
+                    })
+                }
             }
 
             #[unsafe(no_mangle)]
@@ -112,12 +108,11 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                $crate::macros::__panic_guard(|| {
-                    match unsafe { $crate::macros::extract_argv(argc, argv) } {
-                        Ok(args) => super::$ident::sm_open_session(pamh, args, flags),
-                        Err(e) => e,
-                    }
-                })
+                unsafe {
+                    $crate::macros::invoke_hook(argc, argv, |args| {
+                        super::$ident::sm_open_session(pamh, args, flags)
+                    })
+                }
             }
 
             #[unsafe(no_mangle)]
@@ -127,12 +122,11 @@ macro_rules! pam_hooks {
                 argc: c_int,
                 argv: *const *const c_char,
             ) -> PamResultCode {
-                $crate::macros::__panic_guard(|| {
-                    match unsafe { $crate::macros::extract_argv(argc, argv) } {
-                        Ok(args) => super::$ident::sm_setcred(pamh, args, flags),
-                        Err(e) => e,
-                    }
-                })
+                unsafe {
+                    $crate::macros::invoke_hook(argc, argv, |args| {
+                        super::$ident::sm_setcred(pamh, args, flags)
+                    })
+                }
             }
         }
     };
@@ -154,8 +148,7 @@ macro_rules! pam_try {
     };
 }
 
-#[doc(hidden)]
-pub fn __panic_guard<F: FnOnce() -> PamResultCode>(f: F) -> PamResultCode {
+fn panic_guard<F: FnOnce() -> PamResultCode>(f: F) -> PamResultCode {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or(PamResultCode::PAM_ABORT)
 }
 
@@ -163,28 +156,16 @@ pub fn __panic_guard<F: FnOnce() -> PamResultCode>(f: F) -> PamResultCode {
 ///
 /// # Errors
 ///
-/// - [`PamResultCode::PAM_ABORT`] if `argc` is negative.
-/// - [`PamResultCode::PAM_ABORT`] if `argv` is null while `argc > 0`.
-/// - [`PamResultCode::PAM_ABORT`] if any element of `argv` (within `argc`) is null.
+/// - [`PamResultCode::PAM_ABORT`] if any element of `argv` is null.
 ///
 /// # Safety
 ///
-/// When `argc > 0`, `argv` must point to an array of at least `argc` valid
-/// `*const c_char` entries; each non-null entry must point to a NUL-terminated
-/// C string that outlives `'a`.
-#[doc(hidden)]
-#[allow(clippy::similar_names)]
-pub unsafe fn extract_argv<'a>(
-    argc: std::os::raw::c_int,
-    argv: *const *const std::os::raw::c_char,
-) -> Result<Vec<&'a std::ffi::CStr>, PamResultCode> {
-    if argc < 0 || (argc > 0 && argv.is_null()) {
-        return Err(PamResultCode::PAM_ABORT);
-    }
-    (0..argc)
-        .map(|o| {
-            #[allow(clippy::cast_sign_loss)]
-            let p = unsafe { *argv.add(o as usize) };
+/// - Each non-null argument must point to a null-terminated C string that outlives the slice.
+unsafe fn extract_argv(
+    argv: &[*const std::os::raw::c_char],
+) -> Result<Vec<&std::ffi::CStr>, PamResultCode> {
+    argv.iter()
+        .map(|&p| {
             if p.is_null() {
                 Err(PamResultCode::PAM_ABORT)
             } else {
@@ -192,6 +173,36 @@ pub unsafe fn extract_argv<'a>(
             }
         })
         .collect()
+}
+
+/// Validates argc/argv, catches panics, and invokes a `PamHooks` method.
+///
+/// # Safety
+///
+/// - When `argc > 0`, `argv` must point to an array of `argc` valid `*const c_char` entries.
+/// - Each non-null entry must point to a null-terminated C string valid for the duration of `hook`.
+#[doc(hidden)]
+#[allow(clippy::similar_names)]
+pub unsafe fn invoke_hook(
+    argc: std::os::raw::c_int,
+    argv: *const *const std::os::raw::c_char,
+    hook: impl FnOnce(Vec<&std::ffi::CStr>) -> PamResultCode,
+) -> PamResultCode {
+    panic_guard(|| {
+        if argc < 0 || (argc > 0 && argv.is_null()) {
+            return PamResultCode::PAM_ABORT;
+        }
+        #[allow(clippy::cast_sign_loss)]
+        let argv: &[*const std::os::raw::c_char] = if argc == 0 {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(argv, argc as usize) }
+        };
+        match unsafe { extract_argv(argv) } {
+            Ok(args) => hook(args),
+            Err(e) => e,
+        }
+    })
 }
 
 #[cfg(test)]
@@ -209,40 +220,26 @@ pub mod test {
 
     #[test]
     fn panic_returns_error_code() {
-        let code = super::__panic_guard(|| panic!("intentional"));
+        let code = super::panic_guard(|| panic!("intentional"));
         assert_eq!(code, PamResultCode::PAM_ABORT);
     }
 
     #[test]
     fn test_extract_argv() {
-        // Error cases
-        assert_eq!(
-            // argc < 0
-            unsafe { super::extract_argv(-1, ptr::null()) }.unwrap_err(),
-            PamResultCode::PAM_ABORT
-        );
-        assert_eq!(
-            // argc > 0, argv is null
-            unsafe { super::extract_argv(2, ptr::null()) }.unwrap_err(),
-            PamResultCode::PAM_ABORT
-        );
+        // Error case: one element is null
         let with_null: [*const c_char; 2] = [c"first".as_ptr(), ptr::null()];
         assert_eq!(
-            // argc > 0, one element is null
-            unsafe { super::extract_argv(2, with_null.as_ptr()) }.unwrap_err(),
+            unsafe { super::extract_argv(&with_null) }.unwrap_err(),
             PamResultCode::PAM_ABORT
         );
 
         // Success: no arguments
-        assert!(
-            unsafe { super::extract_argv(0, ptr::null()) }
-                .unwrap()
-                .is_empty()
-        );
+        let empty: [*const c_char; 0] = [];
+        assert!(unsafe { super::extract_argv(&empty) }.unwrap().is_empty());
 
         // Success: all elements are valid
         let valid: [*const c_char; 2] = [c"first".as_ptr(), c"second".as_ptr()];
-        let args = unsafe { super::extract_argv(2, valid.as_ptr()) }.unwrap();
+        let args = unsafe { super::extract_argv(&valid) }.unwrap();
         assert_eq!(args.len(), 2);
         assert_eq!(args[0].to_str().unwrap(), "first");
         assert_eq!(args[1].to_str().unwrap(), "second");
