@@ -1,4 +1,5 @@
 #[repr(u32)]
+#[non_exhaustive]
 pub enum ItemType {
     /// The service name
     Service = 1,

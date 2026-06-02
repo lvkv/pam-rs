@@ -31,6 +31,7 @@ pub(crate) const PAM_BINARY_PROMPT: PamMessageStyle = 7;
 #[allow(non_camel_case_types, dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 #[repr(C)]
+#[non_exhaustive]
 pub enum PamResultCode {
     PAM_SUCCESS = 0,
     PAM_OPEN_ERR = 1,
