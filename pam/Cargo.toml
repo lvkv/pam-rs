@@ -11,7 +11,7 @@ authors = [
 repository = "https://github.com/lvkv/pam-rs"
 homepage = "https://github.com/lvkv/pam-rs"
 readme = "../README.md"
-license-file = "../LICENSE"
+license = "MIT"
 keywords = ["pam", "ffi", "linux", "authentication"]
 categories = ["authentication", "security", "os", "external-ffi-bindings"]
 
