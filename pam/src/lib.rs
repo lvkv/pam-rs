@@ -41,7 +41,9 @@
     clippy::panic,
     clippy::unreachable,
     clippy::todo,
-    clippy::unimplemented
+    clippy::unimplemented,
+    improper_ctypes,
+    improper_ctypes_definitions
 )]
 
 pub mod constants;
