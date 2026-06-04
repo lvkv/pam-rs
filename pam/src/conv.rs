@@ -33,7 +33,7 @@ pub struct Inner {
     conv: Option<
         extern "C" fn(
             num_msg: c_int,
-            pam_message: *const *const PamMessage,
+            pam_message: *mut *const PamMessage,
             pam_response: *mut *mut PamResponse,
             appdata_ptr: *mut libc::c_void,
         ) -> c_int,
@@ -87,11 +87,11 @@ impl Conv<'_> {
             msg_style: style,
             msg: msg_cstr.as_ptr(),
         };
-        let msg_ptr: *const PamMessage = &raw const msg;
+        let mut msg_ptr: *const PamMessage = &raw const msg;
 
         let ret = PamResultCode::from_raw(conv_fn(
             1,
-            &raw const msg_ptr,
+            &raw mut msg_ptr,
             &raw mut resp_ptr,
             self.0.appdata_ptr,
         ));
@@ -145,7 +145,7 @@ mod tests {
     /// A conversation function that should never run used for testing.
     extern "C" fn unreachable_conv(
         _: c_int,
-        _: *const *const PamMessage,
+        _: *mut *const PamMessage,
         _: *mut *mut PamResponse,
         _: *mut libc::c_void,
     ) -> c_int {

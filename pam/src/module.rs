@@ -36,33 +36,22 @@ unsafe extern "C" {
         pamh: *mut PamHandle,
         module_data_name: *const c_char,
         data: *mut libc::c_void,
-        cleanup: extern "C" fn(
-            pamh: *const PamHandle,
-            data: *mut libc::c_void,
-            error_status: c_int,
-        ),
+        cleanup: extern "C" fn(pamh: *mut PamHandle, data: *mut libc::c_void, error_status: c_int),
     ) -> c_int;
 
     fn pam_get_item(
         pamh: *const PamHandle,
-        item_type: crate::items::ItemType,
+        item_type: c_int,
         item: &mut *const libc::c_void,
     ) -> c_int;
 
-    fn pam_set_item(
-        pamh: *mut PamHandle,
-        item_type: crate::items::ItemType,
-        item: *const libc::c_void,
-    ) -> c_int;
+    fn pam_set_item(pamh: *mut PamHandle, item_type: c_int, item: *const libc::c_void) -> c_int;
 
-    fn pam_get_user(
-        pamh: *mut PamHandle,
-        user: &mut *const c_char,
-        prompt: *const c_char,
-    ) -> c_int;
+    fn pam_get_user(pamh: *mut PamHandle, user: &mut *const c_char, prompt: *const c_char)
+    -> c_int;
 }
 
-extern "C" fn cleanup<T>(_: *const PamHandle, c_data: *mut libc::c_void, _: c_int) {
+extern "C" fn cleanup<T>(_: *mut PamHandle, c_data: *mut libc::c_void, _: c_int) {
     // Defensive null check, PAM shouldn't normally hand us null here
     if c_data.is_null() {
         return;
@@ -155,7 +144,8 @@ impl PamHandle {
     /// Returns an error if the underlying PAM function call fails.
     pub fn get_item<'a, T: crate::items::Item<'a>>(&'a self) -> PamResult<Option<T>> {
         let mut ptr: *const libc::c_void = std::ptr::null();
-        let res = PamResultCode::from_raw(unsafe { pam_get_item(self, T::type_id(), &mut ptr) });
+        let res =
+            PamResultCode::from_raw(unsafe { pam_get_item(self, T::type_id() as c_int, &mut ptr) });
         if PamResultCode::PAM_SUCCESS != res {
             return Err(res);
         }
@@ -180,7 +170,11 @@ impl PamHandle {
     /// Returns an error if the underlying PAM function call fails.
     pub fn set_item_str<'a, T: crate::items::Item<'a>>(&mut self, item: T) -> PamResult<()> {
         let res = PamResultCode::from_raw(unsafe {
-            pam_set_item(self, T::type_id(), item.into_raw().cast::<libc::c_void>())
+            pam_set_item(
+                self,
+                T::type_id() as c_int,
+                item.into_raw().cast::<libc::c_void>(),
+            )
         });
         if PamResultCode::PAM_SUCCESS == res {
             Ok(())
@@ -285,7 +279,7 @@ mod tests {
     #[test]
     fn cleanup_disaster_scenarios() {
         // PAM is not expected to call cleanup with null data, but we must handle it regardless
-        cleanup::<String>(std::ptr::null(), std::ptr::null_mut(), 0);
+        cleanup::<String>(std::ptr::null_mut(), std::ptr::null_mut(), 0);
 
         // Scenario 1
         // T::drop panics
@@ -297,7 +291,7 @@ mod tests {
                 }
             }
             let ptr = Box::into_raw(Box::new(Bomb)).cast::<libc::c_void>();
-            cleanup::<Bomb>(std::ptr::null(), ptr, 0);
+            cleanup::<Bomb>(std::ptr::null_mut(), ptr, 0);
         }
 
         // Scenario 2
@@ -310,7 +304,7 @@ mod tests {
                 }
             }
             let ptr = Box::into_raw(Box::new(BombRecursive)).cast::<libc::c_void>();
-            cleanup::<BombRecursive>(std::ptr::null(), ptr, 0);
+            cleanup::<BombRecursive>(std::ptr::null_mut(), ptr, 0);
         }
     }
 }
