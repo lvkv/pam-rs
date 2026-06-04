@@ -56,7 +56,7 @@ unsafe extern "C" {
     ) -> c_int;
 
     fn pam_get_user(
-        pamh: *const PamHandle,
+        pamh: *mut PamHandle,
         user: &mut *const c_char,
         prompt: *const c_char,
     ) -> c_int;
@@ -193,6 +193,9 @@ impl PamHandle {
     ///
     /// This is really a specialization of `get_item`.
     ///
+    /// This may prompt via the conversation and set the `PAM_USER` item.
+    /// It therefore takes `&mut self`, unlike the read-only item accessors.
+    ///
     /// See `pam_get_user` in
     /// <http://www.linux-pam.org/Linux-PAM-html/mwg-expected-by-module-item.html>
     ///
@@ -202,7 +205,7 @@ impl PamHandle {
     /// - [`PamResultCode::PAM_BUF_ERR`] if the prompt string contains a 0 byte.
     /// - [`PamResultCode::PAM_SYSTEM_ERR`] if PAM reports success but yields a null pointer.
     /// - [`PamResultCode::PAM_SYSTEM_ERR`] if the returned username is not valid UTF-8.
-    pub fn get_user(&self, prompt: Option<&str>) -> PamResult<String> {
+    pub fn get_user(&mut self, prompt: Option<&str>) -> PamResult<String> {
         let mut ptr: *const c_char = std::ptr::null();
         let prompt_string = prompt
             .map(CString::new)
