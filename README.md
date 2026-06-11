@@ -81,6 +81,14 @@ pamtester $service $USER $operation
 sudo rm /etc/pam.d/$service
 ```
 
+## Development
+
+Use `cargo build` to build and `cargo test` to run unit and integration tests.
+
+Note that integration tests require `pamtester` and `bwrap` ([bubblewrap](https://github.com/containers/bubblewrap)).
+
+For a full list of relevant development commands, see the [`rust.yml`](https://github.com/lvkv/pam-rs/blob/main/.github/workflows/rust.yml) GitHub Actions workflow.
+
 ## Acknowledgements
 
 The initial contents of this repository were heavily borrowed from:

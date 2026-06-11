@@ -128,4 +128,4 @@ jobs:
       - name: Verify README is in sync with the template
         run: |
           cargo install cargo-readme --version 3.3.2 --locked
-          diff README.md <(cargo readme --project-root pam)
+          diff README.md <(cargo readme --project-root pam --template ../README.tpl)
