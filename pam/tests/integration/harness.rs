@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use std::io::Write as _;
+use std::io::{ErrorKind, Write as _};
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 use std::sync::OnceLock;
@@ -11,6 +11,8 @@ pub fn pamtester(
     op: &str,
     stdin: &[u8],
 ) -> Output {
+    require("bwrap", "bubblewrap");
+    require("pamtester", "pamtester");
     let module = example_module_path(example);
     let test_dir = tempfile::tempdir().unwrap();
     let user = user.unwrap_or("user");
@@ -33,6 +35,21 @@ pub fn pamtester(
     // Write stdin and close it so the child sees EOF.
     child.stdin.take().unwrap().write_all(stdin).unwrap();
     child.wait_with_output().unwrap()
+}
+
+/// Panics with an install hint if `program` can't be found.
+fn require(program: &str, package: &str) {
+    let result = Command::new(program)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    if let Err(e) = result {
+        assert!(
+            e.kind() != ErrorKind::NotFound,
+            "`{program}` not found: integration tests require the `{package}` package: {e}"
+        );
+    }
 }
 
 fn example_module_path(name: &str) -> PathBuf {
