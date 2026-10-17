@@ -335,7 +335,7 @@ pub mod test {
 
         // Success: no arguments
         let empty: [*const c_char; 0] = [];
-        assert!(unsafe { super::extract_argv(&empty) }.unwrap().is_empty());
+        assert_eq!(unsafe { super::extract_argv(&empty) }, Ok(vec![]));
 
         // Success: all elements are valid
         let valid: [*const c_char; 2] = [c"first".as_ptr(), c"second".as_ptr()];
