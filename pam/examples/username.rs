@@ -12,7 +12,7 @@ impl PamHooks for Username {
             Ok(username) => username,
             Err(e) => {
                 eprintln!("failed to get username, error code: {e:?}");
-                assert!(e != PamResultCode::PAM_SUCCESS);
+                assert_ne!(e, PamResultCode::PAM_SUCCESS);
                 return e;
             }
         };
