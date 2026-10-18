@@ -30,7 +30,32 @@ pub enum ItemType {
 }
 
 /// A type that can be requested by [`crate::module::PamHandle::get_item`].
-pub trait Item<'a> {
+///
+/// This trait is sealed. The following code will not compile:
+///
+/// ```compile_fail,E0277
+/// use pam::items::{Item, ItemType};
+/// use std::ffi::c_char;
+///
+/// struct MyItem;
+///
+/// impl<'a> Item<'a> for MyItem {
+///     type Raw = c_char;
+///
+///     fn type_id() -> ItemType {
+///         ItemType::User
+///     }
+///
+///     unsafe fn from_raw(_raw: *const c_char) -> Self {
+///         Self
+///     }
+///
+///     fn into_raw(self) -> *const c_char {
+///         std::ptr::null()
+///     }
+/// }
+/// ```
+pub trait Item<'a>: private::Sealed {
     /// The `repr(C)` type that is returned (by pointer) by the underlying `pam_get_item` function.
     type Raw;
 
@@ -48,6 +73,13 @@ pub trait Item<'a> {
     fn into_raw(self) -> *const Self::Raw;
 }
 
+/// Seals [`Item`].
+mod private {
+    pub trait Sealed {}
+}
+
+impl private::Sealed for crate::conv::Conv<'_> {}
+
 macro_rules! cstr_item {
     ($name:ident) => {
         #[derive(Debug)]
@@ -59,6 +91,8 @@ macro_rules! cstr_item {
                 &self.0
             }
         }
+
+        impl private::Sealed for $name<'_> {}
 
         impl<'s> Item<'s> for $name<'s> {
             type Raw = libc::c_char;
@@ -115,6 +149,8 @@ macro_rules! secret_cstr_item {
                     .finish()
             }
         }
+
+        impl private::Sealed for $name<'_> {}
 
         impl<'s> Item<'s> for $name<'s> {
             type Raw = libc::c_char;
