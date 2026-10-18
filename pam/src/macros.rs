@@ -55,7 +55,7 @@ macro_rules! pam_hooks {
             ) -> PamResultCode {
                 unsafe {
                     $crate::macros::invoke_hook(pamh, argc, argv, |pamh, args| {
-                        super::$ident::acct_mgmt(pamh, args, flags)
+                        <super::$ident as PamHooks>::acct_mgmt(pamh, args, flags)
                     })
                 }
             }
@@ -69,7 +69,7 @@ macro_rules! pam_hooks {
             ) -> PamResultCode {
                 unsafe {
                     $crate::macros::invoke_hook(pamh, argc, argv, |pamh, args| {
-                        super::$ident::sm_authenticate(pamh, args, flags)
+                        <super::$ident as PamHooks>::sm_authenticate(pamh, args, flags)
                     })
                 }
             }
@@ -83,7 +83,7 @@ macro_rules! pam_hooks {
             ) -> PamResultCode {
                 unsafe {
                     $crate::macros::invoke_hook(pamh, argc, argv, |pamh, args| {
-                        super::$ident::sm_chauthtok(pamh, args, flags)
+                        <super::$ident as PamHooks>::sm_chauthtok(pamh, args, flags)
                     })
                 }
             }
@@ -97,7 +97,7 @@ macro_rules! pam_hooks {
             ) -> PamResultCode {
                 unsafe {
                     $crate::macros::invoke_hook(pamh, argc, argv, |pamh, args| {
-                        super::$ident::sm_close_session(pamh, args, flags)
+                        <super::$ident as PamHooks>::sm_close_session(pamh, args, flags)
                     })
                 }
             }
@@ -111,7 +111,7 @@ macro_rules! pam_hooks {
             ) -> PamResultCode {
                 unsafe {
                     $crate::macros::invoke_hook(pamh, argc, argv, |pamh, args| {
-                        super::$ident::sm_open_session(pamh, args, flags)
+                        <super::$ident as PamHooks>::sm_open_session(pamh, args, flags)
                     })
                 }
             }
@@ -125,7 +125,7 @@ macro_rules! pam_hooks {
             ) -> PamResultCode {
                 unsafe {
                     $crate::macros::invoke_hook(pamh, argc, argv, |pamh, args| {
-                        super::$ident::sm_setcred(pamh, args, flags)
+                        <super::$ident as PamHooks>::sm_setcred(pamh, args, flags)
                     })
                 }
             }
