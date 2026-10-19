@@ -40,6 +40,11 @@ which are distributed as shared libraries.
 The goal of this library is to provide a simple, type-safe API to write
 these modules.
 
+## Platform support
+
+Only Linux-PAM is supported, so this crate only builds for Linux targets.
+Please open an issue if you'd like support for other platforms.
+
 ## Usage
 
 Add `pam-bindings` to your dependencies in Cargo.toml:

@@ -35,6 +35,11 @@
 //!
 //! The goal of this library is to provide a simple, type-safe API to write
 //! these modules.
+//!
+//! # Platform support
+//!
+//! Only Linux-PAM is supported, so this crate only builds for Linux targets.
+//! Please open an issue if you'd like support for other platforms.
 #![deny(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -45,6 +50,11 @@
     improper_ctypes,
     improper_ctypes_definitions
 )]
+
+#[cfg(not(target_os = "linux"))]
+compile_error!(
+    "pam-bindings only supports Linux-PAM. Please open an issue if you'd like support for other platforms."
+);
 
 pub mod constants;
 pub mod conv;
