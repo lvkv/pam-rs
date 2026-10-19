@@ -51,7 +51,7 @@ Add `pam-bindings` to your dependencies in Cargo.toml:
 
 ```toml
 [dependencies]
-pam-bindings = "0.3.0"
+pam-bindings = "0.4.0"
 ```
 
 ## Examples
